@@ -174,7 +174,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
          */
 
         /*
-         * 设置对应的属性，通过setter方法调用。
+         * 获取getter方法，从而获取XXXConfig中的属性，并从配置中获取属性，设置相应的BeanDefinition中的PropertyValue中的值。
          */
         Set<String> props = new HashSet<String>();
         ManagedMap parameters = null;
@@ -184,7 +184,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                     && Modifier.isPublic(setter.getModifiers())
                     && setter.getParameterTypes().length == 1) {
                 // setter 方法，参数长度是1，并且是public类型的
-                Class<?> type = setter.getParameterTypes()[0];
+                Class<?> type = setter.getParameterTypes()[0]; // 获得参数的类型，也就是属性的类型
                 // 这里是取属性的名称，将第一个字母变成小写的格式，改为-分割
                 String property = StringUtils.camelToSplitName(name.substring(3, 4).toLowerCase() + name.substring(4), "-");
                 props.add(property);
@@ -219,9 +219,10 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                     	value = value.trim();
                     	if (value.length() > 0) {
                     		if ("registry".equals(property) && RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(value)) {
-                                //
+                                // 不用任何的注册中心
                             	RegistryConfig registryConfig = new RegistryConfig();
                             	registryConfig.setAddress(RegistryConfig.NO_AVAILABLE);
+                                // 可以看出所有的属性都是放到了BeanDefinition的PropertyValue中
                             	beanDefinition.getPropertyValues().addPropertyValue(property, registryConfig);
                             } else if ("registry".equals(property) && value.indexOf(',') != -1) {
                     			parseMultiRef("registries", value, beanDefinition, parserContext);
@@ -231,6 +232,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                 parseMultiRef("protocols", value, beanDefinition, parserContext);
                             } else {
                                 Object reference;
+                                // 判断是不是Java原生的类型
                                 if (isPrimitive(type)) {
                                     if ("async".equals(property) && "false".equals(value)
                                             || "timeout".equals(property) && "0".equals(value)
@@ -243,7 +245,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     }
                                     reference = value;
                                 } else if ("protocol".equals(property) 
-                                        && ExtensionLoader.getExtensionLoader(Protocol.class).hasExtension(value)
+                                        && ExtensionLoader.getExtensionLoader(Protocol.class).hasExtension(value) // 这里还需要再看看
                                         && (! parserContext.getRegistry().containsBeanDefinition(value)
                                                 || ! ProtocolConfig.class.getName().equals(parserContext.getRegistry().getBeanDefinition(value).getBeanClassName()))) {
                                     if ("dubbo:provider".equals(element.getTagName())) {
@@ -257,12 +259,14 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                         && (! parserContext.getRegistry().containsBeanDefinition(value)
                                                 || ! MonitorConfig.class.getName().equals(parserContext.getRegistry().getBeanDefinition(value).getBeanClassName()))) {
                                     // 兼容旧版本配置
+                                    // 将monitor属性转为<dubbo:monitor>
                                     reference = convertMonitor(value);
                                 } else if ("onreturn".equals(property)) {
                                     int index = value.lastIndexOf(".");
                                     String returnRef = value.substring(0, index);
                                     String returnMethod = value.substring(index + 1);
                                     reference = new RuntimeBeanReference(returnRef);
+                                    // 在调用之前，调用之后，出现异常时，会触发oninvoke, onreturn, onthrow三个事件
                                     beanDefinition.getPropertyValues().addPropertyValue("onreturnMethod", returnMethod);
                                 } else if ("onthrow".equals(property)) {
                                     int index = value.lastIndexOf(".");
@@ -279,6 +283,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     }
                                     reference = new RuntimeBeanReference(value);
                                 }
+                                // 将属性中的property属性替换成相应的对象
 		                        beanDefinition.getPropertyValues().addPropertyValue(property, reference);
                             }
                     	}
@@ -288,6 +293,9 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         }
         /*
         * 调用setter方法调用属性结束
+         */
+        /*
+         * 下面是将所有的Attribute的值放入parameters属性中，这里在PropertyValue的parameters属性中
          */
         NamedNodeMap attributes = element.getAttributes();
         int len = attributes.getLength();
@@ -341,6 +349,9 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
     }
     
     @SuppressWarnings("unchecked")
+    /**
+     * 出现多种ref的情况，也就是某个属性多配了几个值，变成list放入属性property中
+     */
 	private static void parseMultiRef(String property, String value, RootBeanDefinition beanDefinition,
             ParserContext parserContext) {
     	String[] values = value.split("\\s*[,]+\\s*");

@@ -40,6 +40,7 @@ import com.alibaba.dubbo.config.spring.ServiceBean;
 public class DubboNamespaceHandler extends NamespaceHandlerSupport {
 
 	static {
+            // 检查是不是有相同的DubboNamespaceHandler
 		Version.checkDuplicate(DubboNamespaceHandler.class);
 	}
 
@@ -53,6 +54,7 @@ public class DubboNamespaceHandler extends NamespaceHandlerSupport {
         registerBeanDefinitionParser("protocol", new DubboBeanDefinitionParser(ProtocolConfig.class, true));
         registerBeanDefinitionParser("service", new DubboBeanDefinitionParser(ServiceBean.class, true));
         registerBeanDefinitionParser("reference", new DubboBeanDefinitionParser(ReferenceBean.class, false));
+            // 注意这里是<dubbo:annotation package="com.package.to.be.scanned" />的解析
         registerBeanDefinitionParser("annotation", new DubboBeanDefinitionParser(AnnotationBean.class, true));
     }
 

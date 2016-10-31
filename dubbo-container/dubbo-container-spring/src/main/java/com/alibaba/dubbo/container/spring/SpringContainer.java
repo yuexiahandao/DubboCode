@@ -27,6 +27,8 @@ import com.alibaba.dubbo.container.Container;
  * SpringContainer. (SPI, Singleton, ThreadSafe)
  * 
  * @author william.liangf
+ *
+ * https://segmentfault.com/q/1010000000623184
  */
 public class SpringContainer implements Container {
 
@@ -43,11 +45,13 @@ public class SpringContainer implements Container {
 	}
 
 	public void start() {
+        // 获取Spring配置文件的地址
         String configPath = ConfigUtils.getProperty(SPRING_CONFIG);
         if (configPath == null || configPath.length() == 0) {
             configPath = DEFAULT_SPRING_CONFIG;
         }
         context = new ClassPathXmlApplicationContext(configPath.split("[,\\s]+"));
+        // 启动
         context.start();
     }
 

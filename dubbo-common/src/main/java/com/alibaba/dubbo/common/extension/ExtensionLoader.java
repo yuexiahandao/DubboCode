@@ -610,7 +610,7 @@ public class ExtensionLoader<T> {
     }
     
     private void loadFile(Map<String, Class<?>> extensionClasses, String dir) {
-        // 获取调用class的name
+        // 找到以type命名的文件，比如com.alibaba.dubbo.rpc.Protocol文件。
         String fileName = dir + type.getName();
         try {
             Enumeration<java.net.URL> urls;
@@ -626,7 +626,7 @@ public class ExtensionLoader<T> {
                 while (urls.hasMoreElements()) {
                     java.net.URL url = urls.nextElement();
                     try {
-                        // 资源编辑器加载资源
+                        // 资源编辑器加载资源，主要是读取各个com.alibaba.dubbo.rpc.Protocol文件
                         BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), "utf-8"));
                         try {
                             String line = null;
@@ -645,7 +645,7 @@ public class ExtensionLoader<T> {
                                         if (line.length() > 0) {
                                             Class<?> clazz = Class.forName(line, true, classLoader);
                                             if (! type.isAssignableFrom(clazz)) {
-                                                // Container的子类
+                                                // type的子类
                                                 throw new IllegalStateException("Error when load extension class(interface: " +
                                                         type + ", class line: " + clazz.getName() + "), class " 
                                                         + clazz.getName() + "is not subtype of interface.");
@@ -673,6 +673,7 @@ public class ExtensionLoader<T> {
                                                     clazz.getConstructor();
                                                     if (name == null || name.length() == 0) {
                                                         // 从Class的Extension注解中获取默认的名称
+                                                        // 如果文件中不是key=class的格式，name自动生成一个
                                                         name = findAnnotationName(clazz);
                                                         if (name == null || name.length() == 0) {
                                                             if (clazz.getSimpleName().length() > type.getSimpleName().length()
@@ -683,6 +684,7 @@ public class ExtensionLoader<T> {
                                                             }
                                                         }
                                                     }
+
                                                     String[] names = NAME_SEPARATOR.split(name);
                                                     if (names != null && names.length > 0) {
                                                         Activate activate = clazz.getAnnotation(Activate.class);
