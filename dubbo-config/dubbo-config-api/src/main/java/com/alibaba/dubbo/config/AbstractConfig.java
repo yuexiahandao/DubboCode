@@ -138,23 +138,30 @@ public abstract class AbstractConfig implements Serializable {
         if (config == null) {
             return;
         }
+        // 找到对应的标签名，组成property的前缀部分
         String prefix = "dubbo." + getTagName(config.getClass()) + ".";
         Method[] methods = config.getClass().getMethods();
+        // 又是取得相应class的所有方法
         for (Method method : methods) {
             try {
                 String name = method.getName();
                 if (name.length() > 3 && name.startsWith("set") && Modifier.isPublic(method.getModifiers()) 
                         && method.getParameterTypes().length == 1 && isPrimitive(method.getParameterTypes()[0])) {
+                    // 找到有用的getter方法
                     String property = StringUtils.camelToSplitName(name.substring(3, 4).toLowerCase() + name.substring(4), "-");
 
                     String value = null;
+                    // 首先使用：dubbo.{tag}.{id}.{prop}设置属性
                     if (config.getId() != null && config.getId().length() > 0) {
+                        // 例如：dubbo.{tag}.{id}.{prop}
                         String pn = prefix + config.getId() + "." + property;
+                        // 取属性，这样可以针对某个id设置具体的prop
                         value = System.getProperty(pn);
                         if(! StringUtils.isBlank(value)) {
                             logger.info("Use System Property " + pn + " to config dubbo");
                         }
                     }
+                    // 再使用：dubbo.{tag}.{prop}设置属性，没有具化到id，但是到tag
                     if (value == null || value.length() == 0) {
                         String pn = prefix + property;
                         value = System.getProperty(pn);
@@ -203,6 +210,7 @@ public abstract class AbstractConfig implements Serializable {
     
     private static String getTagName(Class<?> cls) {
         String tag = cls.getSimpleName();
+        // 去掉Class后面的Config和Bean
         for (String suffix : SUFFIXS) {
             if (tag.endsWith(suffix)) {
                 tag = tag.substring(0, tag.length() - suffix.length());

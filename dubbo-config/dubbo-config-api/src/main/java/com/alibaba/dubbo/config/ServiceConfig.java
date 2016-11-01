@@ -115,7 +115,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 		return unexported;
 	}
 
+    /**
+     * 将接口暴露出去
+     */
     public synchronized void export() {
+        /*
+        * 取Provider里面的设置
+         */
         if (provider != null) {
             if (export == null) {
                 export = provider.getExport();
@@ -127,16 +133,19 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (export != null && ! export.booleanValue()) {
             return;
         }
+        // delay用于延时的设置
         if (delay != null && delay > 0) {
             Thread thread = new Thread(new Runnable() {
                 public void run() {
                     try {
+                        // 延时
                         Thread.sleep(delay);
                     } catch (Throwable e) {
                     }
                     doExport();
                 }
             });
+            // 不能影响启动
             thread.setDaemon(true);
             thread.setName("DelayExportServiceThread");
             thread.start();
@@ -144,7 +153,10 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             doExport();
         }
     }
-    
+
+    /**
+     * 真正去执行暴露服务的方法
+     */
     protected synchronized void doExport() {
         if (unexported) {
             throw new IllegalStateException("Already unexported!");
@@ -152,10 +164,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (exported) {
             return;
         }
+        // 置标志位
         exported = true;
+        // 接口名称不能为空
         if (interfaceName == null || interfaceName.length() == 0) {
             throw new IllegalStateException("<dubbo:service interface=\"\" /> interface not allow null!");
         }
+        // provider为空的话，新建ProviderConfig
         checkDefault();
         if (provider != null) {
             if (application == null) {
@@ -190,36 +205,59 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 monitor = application.getMonitor();
             }
         }
+        /*
+        * 上面是基础配置的判空和置上一些值
+         */
+        /*
+        * ref一般是具体的暴露的服务，这里如果是通用的Service
+         */
         if (ref instanceof GenericService) {
             interfaceClass = GenericService.class;
+            // 置上标志位
             if (StringUtils.isEmpty(generic)) {
                 generic = Boolean.TRUE.toString();
             }
         } else {
             try {
+                // 加载class，使用当前线程的类加载器
                 interfaceClass = Class.forName(interfaceName, true, Thread.currentThread()
                         .getContextClassLoader());
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+            /*
+            * 检查对应接口是否存在对应的方法
+             */
             checkInterfaceAndMethods(interfaceClass, methods);
+            /*
+            * 检查ref对应的bean是否存在
+             */
             checkRef();
             generic = Boolean.FALSE.toString();
         }
+        /*
+        * 如果有local设置Local
+         */
         if(local !=null){
+            // 设置为true的话，名称是+Local
             if("true".equals(local)){
                 local=interfaceName+"Local";
             }
             Class<?> localClass;
             try {
+                // 将本地实现类加载进来
                 localClass = ClassHelper.forNameWithThreadContextClassLoader(local);
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+            // local必须实现接口类
             if(!interfaceClass.isAssignableFrom(localClass)){
                 throw new IllegalStateException("The local implemention class " + localClass.getName() + " not implement interface " + interfaceName);
             }
         }
+        /*
+         * 如果有存根，设置存根
+         */
         if(stub !=null){
             if("true".equals(stub)){
                 stub=interfaceName+"Stub";
@@ -234,6 +272,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 throw new IllegalStateException("The stub implemention class " + stubClass.getName() + " not implement interface " + interfaceName);
             }
         }
+        // 设置相应的值
         checkApplication();
         checkRegistry();
         checkProtocol();

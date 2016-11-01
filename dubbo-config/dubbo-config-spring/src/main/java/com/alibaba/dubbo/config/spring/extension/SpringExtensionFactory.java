@@ -26,6 +26,8 @@ import com.alibaba.dubbo.common.utils.ConcurrentHashSet;
  * SpringExtensionFactory
  * 
  * @author william.liangf
+ *
+ * 用于存放ApplicationContext
  */
 public class SpringExtensionFactory implements ExtensionFactory {
     
